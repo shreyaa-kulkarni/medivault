@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>MediVault — Healthcare Document System</title>
+<style>
+/* ═══════ RESET & ROOT ═══════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b1120;--bg2:#0e1628;--bg3:#121d30;
+  --surface:#162033;--surface2:#1b2840;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --primary:#3b9eff;--pdim:rgba(59,158,255,0.15);
+  --accent:#00d4a8;--adim:rgba(0,212,168,0.13);
+  --text:#dce8ff;--text2:#7a9cc0;--text3:#3f5572;
+  --danger:#f56565;--warn:#f59e0b;--ok:#4ade80;
+  --r:12px;--rsm:8px;--rxs:6px;
+  --font:'Segoe UI',system-ui,sans-serif;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;overflow:hidden}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+input,select,textarea,button{font-family:var(--font)}
+button{cursor:pointer}
+
+/* ═══════ AUTH SCREEN ═══════ */
+#auth-screen{
+  position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at 25% 35%,rgba(59,158,255,0.09),transparent 55%),
+             radial-gradient(ellipse at 78% 72%,rgba(0,212,168,0.07),transparent 50%),var(--bg);
+  z-index:100;padding:20px;overflow-y:auto;
+}
+.auth-outer{width:100%;max-width:980px;display:flex;gap:0;border-radius:var(--r);overflow:hidden;box-shadow:0 28px 80px rgba(0,0,0,0.6);border:1px solid var(--border2)}
+
+/* Left panel */
+.auth-left{width:320px;min-width:320px;background:linear-gradient(160deg,#0d2147,#061630);padding:44px 36px;display:flex;flex-direction:column;justify-content:center}
+.auth-brand{display:flex;align-items:center;gap:12px;margin-bottom:36px}
+.brand-mark{width:48px;height:48px;background:linear-gradient(135deg,#3b9eff,#00d4a8);border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.brand-name{font-size:22px;font-weight:700;letter-spacing:-.4px}
+.brand-tag{font-size:12px;color:#5a80a8;margin-top:2px}
+.auth-feature{display:flex;gap:12px;margin-bottom:22px}
+.feature-icon{width:36px;height:36px;border-radius:9px;background:rgba(59,158,255,0.12);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.feature-text h4{font-size:13px;font-weight:600;color:var(--text)}
+.feature-text p{font-size:12px;color:#4a7090;margin-top:2px}
+.auth-roles{display:flex;gap:10px;margin-top:30px}
+.role-pill{flex:1;padding:10px 8px;border-radius:var(--rsm);border:1px solid var(--border2);text-align:center;cursor:pointer;transition:all .2s;background:rgba(255,255,255,0.03)}
+.role-pill.on{background:var(--primary);border-color:var(--primary)}
+.role-pill .rp-ic{font-size:20px;margin-bottom:5px}
+.role-pill .rp-lbl{font-size:12px;font-weight:600}
+.role-pill .rp-sub{font-size:10px;color:rgba(255,255,255,0.6);margin-top:2px}
+
+/* Right panel */
+.auth-right{flex:1;background:var(--surface);padding:40px 36px;display:flex;flex-direction:column;justify-content:center}
+.auth-right h2{font-size:22px;font-weight:700;letter-spacing:-.4px;margin-bottom:4px}
+.auth-right .auth-sub{font-size:13px;color:var(--text2);margin-bottom:28px}
+
+/* Tabs inside right panel */
+.form-tabs{display:flex;gap:0;border:1px solid var(--border2);border-radius:var(--rsm);overflow:hidden;margin-bottom:24px;width:fit-content}
+.ftab{padding:8px 20px;font-size:13px;font-weight:600;background:transparent;border:none;color:var(--text2);cursor:pointer;transition:all .2s}
+.ftab.on{background:var(--primary);color:#fff}
+
+/* Fields */
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.field label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+.field input,.field select{background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:var(--rsm);font-size:13px;outline:none;transition:border-color .2s;width:100%}
+.field input:focus,.field select:focus{border-color:var(--primary)}
+.field input::placeholder{color:var(--text3)}
+.field select option{background:var(--bg3)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+
+/* Error */
+.form-err{background:rgba(245,101,101,.1);border:1px solid rgba(245,101,101,.3);color:var(--danger);padding:9px 13px;border-radius:var(--rsm);font-size:13px;margin-bottom:13px;display:none}
+
+/* ═══════ BUTTONS ═══════ */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:var(--rsm);font-size:13px;font-weight:600;border:none;transition:all .18s;white-space:nowrap;cursor:pointer}
+.btn-primary{background:var(--primary);color:#fff}.btn-primary:hover{background:#5aaeff;transform:translateY(-1px)}
+.btn-accent{background:var(--accent);color:#031a10;font-weight:700}.btn-accent:hover{filter:brightness(1.08)}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border2)}.btn-ghost:hover{background:var(--surface2);color:var(--text)}
+.btn-danger{background:rgba(245,101,101,.1);color:var(--danger);border:1px solid rgba(245,101,101,.25)}.btn-danger:hover{background:rgba(245,101,101,.2)}
+.btn-full{width:100%;justify-content:center}
+.btn-sm{padding:5px 12px;font-size:12px}.btn-xs{padding:3px 9px;font-size:11px}
+.btn-icon{padding:6px 7px;border-radius:var(--rxs);background:transparent;border:1px solid var(--border);color:var(--text2)}.btn-icon:hover{background:var(--surface2);color:var(--text);border-color:var(--border2)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
+
+/* ═══════ APP SHELL ═══════ */
+#app{display:flex;height:100vh;overflow:hidden}
+
+/* Sidebar */
+#sidebar{width:248px;min-width:248px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;transition:width .3s,min-width .3s;overflow:hidden}
+#sidebar.slim{width:62px;min-width:62px}
+.sb-hd{padding:16px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;overflow:hidden;white-space:nowrap}
+.sb-mark{width:34px;height:34px;min-width:34px;background:linear-gradient(135deg,#3b9eff,#00d4a8);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.sb-txt h2{font-size:16px;font-weight:700;letter-spacing:-.3px}
+.sb-txt span{font-size:11px;color:var(--text3)}
+#sidebar.slim .sb-txt{display:none}
+.sb-nav{flex:1;padding:8px;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
+.sb-sec{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;padding:8px 10px 3px;white-space:nowrap;overflow:hidden}
+#sidebar.slim .sb-sec{opacity:0;height:0;padding:0}
+.nb{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--rsm);border:none;background:transparent;color:var(--text2);font-size:13px;font-weight:500;width:100%;text-align:left;font-family:var(--font);transition:all .15s;white-space:nowrap;overflow:hidden}
+.nb:hover{background:var(--surface2);color:var(--text)}.nb.on{background:var(--pdim);color:var(--primary)}
+.nb .ic{font-size:17px;min-width:18px;text-align:center;flex-shrink:0}
+#sidebar.slim .nb span:not(.ic){display:none}
+.sb-ft{padding:8px;border-top:1px solid var(--border)}
+.sb-usr{display:flex;align-items:center;gap:9px;padding:8px 10px;overflow:hidden;white-space:nowrap}
+.ava{width:32px;height:32px;min-width:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0}
+.uinfo{overflow:hidden}.uname{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.urole{font-size:11px;color:var(--text3)}
+#sidebar.slim .uinfo{display:none}
+
+/* Main */
+#main-area{flex:1;overflow-y:auto;display:flex;flex-direction:column;min-width:0}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:11px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:50}
+.tb-title{font-size:17px;font-weight:700;flex:1;letter-spacing:-.3px}
+.searchbox{display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rsm);padding:7px 12px;width:220px}
+.searchbox input{background:none;border:none;color:var(--text);font-size:13px;flex:1;outline:none}.searchbox input::placeholder{color:var(--text3)}
+
+/* Pages */
+.page{padding:22px;display:none;animation:fadeUp .22s ease}
+.page.on{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+.pg-title{font-size:21px;font-weight:700;letter-spacing:-.4px;margin-bottom:3px}
+.pg-sub{font-size:13px;color:var(--text2);margin-bottom:20px}
+
+/* Stats */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:13px;margin-bottom:22px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;position:relative;overflow:hidden}
+.stat::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--sc,var(--primary))}
+.stat-val{font-size:28px;font-weight:700;letter-spacing:-1px;line-height:1}
+.stat-lbl{font-size:12px;color:var(--text2);margin-top:4px}
+.stat-ic{font-size:20px;margin-bottom:8px}
+
+/* Card */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:17px 20px;margin-bottom:16px}
+.card-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.card-t{font-size:15px;font-weight:700}
+
+/* Folder grid */
+.fg{display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:13px;margin-bottom:22px}
+.fc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;user-select:none}
+.fc::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--fc,#3b9eff)}
+.fc:hover{border-color:var(--border2);background:var(--surface2);transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.3)}
+.fc-acts{position:absolute;top:8px;right:8px;gap:4px;display:none}
+.fc:hover .fc-acts{display:flex}
+.fc-icon{font-size:28px;margin-bottom:9px}
+.fc-name{font-size:14px;font-weight:700;margin-bottom:3px;padding-right:56px;word-break:break-word}
+.fc-meta{font-size:11px;color:var(--text3)}
+.fc-open{margin-top:10px}
+
+/* Doc list */
+.doc-list{display:flex;flex-direction:column;gap:7px}
+.di{display:flex;align-items:center;gap:11px;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rsm);transition:all .15s}
+.di:hover{border-color:var(--border2);background:var(--surface)}
+.di-ic{width:36px;height:36px;border-radius:var(--rxs);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.di-info{flex:1;min-width:0}
+.di-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.di-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.di-acts{display:flex;gap:5px;opacity:0;transition:opacity .15s}.di:hover .di-acts{opacity:1}
+
+/* Patient rows */
+.pr{display:flex;align-items:center;gap:11px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rsm);cursor:pointer;transition:all .15s;margin-bottom:7px}
+.pr:hover{border-color:var(--primary);background:var(--surface2);transform:translateY(-1px)}
+.pr-ava{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0}
+.pr-info{flex:1;min-width:0}.pr-name{font-size:14px;font-weight:700}.pr-meta{font-size:11px;color:var(--text2);margin-top:2px}
+
+/* Profile header */
+.phd{background:linear-gradient(135deg,var(--surface),var(--surface2));border:1px solid var(--border2);border-radius:var(--r);padding:20px;display:flex;align-items:center;gap:16px;margin-bottom:20px}
+.p-ava{width:62px;height:62px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:#fff;flex-shrink:0;box-shadow:0 4px 16px rgba(0,0,0,.35)}
+.p-name{font-size:21px;font-weight:700;letter-spacing:-.3px}
+.p-chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:7px}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700}
+.b-blue{background:rgba(59,158,255,.13);color:var(--primary)}
+.b-teal{background:rgba(0,212,168,.13);color:var(--accent)}
+.b-green{background:rgba(74,222,128,.12);color:var(--ok)}
+.b-red{background:rgba(245,101,101,.12);color:var(--danger)}
+
+/* ═══════ MODALS ═══════ */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(5px);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
+.ov.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);padding:26px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto;animation:mIn .24s cubic-bezier(.34,1.56,.64,1)}
+.modal-lg{max-width:640px}
+@keyframes mIn{from{transform:scale(.88) translateY(18px);opacity:0}to{transform:none;opacity:1}}
+.mhd{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.mtitle{font-size:18px;font-weight:700}
+.mclose{background:none;border:none;color:var(--text2);font-size:22px;cursor:pointer;padding:2px;border-radius:5px;line-height:1}.mclose:hover{color:var(--text);background:var(--border)}
+.mft{display:flex;gap:9px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+
+/* Drop zone */
+.dz{border:2px dashed var(--border2);border-radius:var(--r);padding:28px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg3)}
+.dz:hover,.dz.over{border-color:var(--primary);background:var(--pdim)}
+.dz-ic{font-size:32px;margin-bottom:8px}
+
+/* Color swatches */
+.csw{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s;flex-shrink:0}
+.csw.picked{border-color:#fff;transform:scale(1.18)}
+
+/* Rename input */
+.rin{background:var(--bg3);border:1px solid var(--primary);color:var(--text);border-radius:var(--rxs);padding:3px 7px;font-size:14px;font-weight:700;width:calc(100% - 60px);outline:none}
+
+/* ═══════ VIEWER ═══════ */
+.viewer{position:fixed;inset:0;background:rgba(0,0,0,.93);z-index:300;flex-direction:column;display:none}
+.viewer.open{display:flex}
+.vbar{padding:12px 18px;display:flex;align-items:center;gap:11px;background:rgba(0,0,0,.4)}
+.varea{flex:1;display:flex;align-items:center;justify-content:center;overflow:auto;padding:18px}
+.varea img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}
+.no-prev{text-align:center;color:var(--text2)}
+
+/* ═══════ TOAST ═══════ */
+#toast-w{position:fixed;top:16px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:6px}
+.toast{padding:10px 16px;border-radius:var(--rsm);font-size:13px;font-weight:500;min-width:250px;display:flex;align-items:center;gap:8px;box-shadow:0 8px 28px rgba(0,0,0,.4);animation:tIn .28s ease}
+.tok{background:#112a1c;border:1px solid #1e4a30;color:var(--ok)}
+.terr{background:#2a1212;border:1px solid #4a1e1e;color:var(--danger)}
+.tinf{background:#122030;border:1px solid #1e3a50;color:var(--primary)}
+@keyframes tIn{from{transform:translateX(110%);opacity:0}to{transform:none;opacity:1}}
+
+/* ═══════ LOADING ═══════ */
+.loading{position:fixed;inset:0;background:rgba(11,17,32,.8);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+.loading.open{display:flex}
+.spinner{width:36px;height:36px;border:3px solid var(--border2);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ═══════ EMPTY ═══════ */
+.empty{text-align:center;padding:44px 20px;color:var(--text3)}
+.empty-ic{font-size:42px;margin-bottom:12px;opacity:.4}
+.empty h3{font-size:15px;color:var(--text2);margin-bottom:5px;font-weight:600}
+.empty p{font-size:13px}
+
+/* Misc */
+.row{display:flex;align-items:center;gap:10px}
+.sep{height:1px;background:var(--border);margin:16px 0}
+.info-tag{font-family:'Courier New',monospace;font-size:11px;background:var(--bg);border:1px solid var(--border2);padding:1px 7px;border-radius:4px;color:var(--accent)}
+</style>
+</head>
+<body>
+
+<div id="toast-w"></div>
+<div class="loading" id="loading"><div class="spinner"></div><span style="color:var(--text2);font-size:13px" id="loading-msg">Loading…</span></div>
+
+<!-- ═══════════════════════════════
+     AUTH SCREEN
+═══════════════════════════════ -->
+<div id="auth-screen">
+  <div class="auth-outer">
+
+    <!-- Left branding -->
+    <div class="auth-left">
+      <div class="auth-brand">
+        <div class="brand-mark">🏥</div>
+        <div><div class="brand-name">MediVault</div><div class="brand-tag">Healthcare Record System</div></div>
+      </div>
+      <div class="auth-feature">
+        <div class="feature-icon">🔒</div>
+        <div class="feature-text"><h4>Secure & Encrypted</h4><p>All records stored with bank-level security</p></div>
+      </div>
+      <div class="auth-feature">
+        <div class="feature-icon">📁</div>
+        <div class="feature-text"><h4>Smart Folder System</h4><p>Organise documents in named folders</p></div>
+      </div>
+      <div class="auth-feature">
+        <div class="feature-icon">👨‍⚕️</div>
+        <div class="feature-text"><h4>Doctor Access</h4><p>Doctors browse all patient folders by name</p></div>
+      </div>
+
+      <!-- Role selector -->
+      <div style="margin-top:26px;margin-bottom:8px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em">I am a…</div>
+      <div class="auth-roles">
+        <div class="role-pill on" id="role-patient" onclick="selectRole('patient')">
+          <div class="rp-ic">🤒</div>
+          <div class="rp-lbl">Patient</div>
+          <div class="rp-sub">pw: 123</div>
+        </div>
+        <div class="role-pill" id="role-doctor" onclick="selectRole('doctor')">
+          <div class="rp-ic">👨‍⚕️</div>
+          <div class="rp-lbl">Doctor</div>
+          <div class="rp-sub">pw: 456</div>
+        </div>
+        <div class="role-pill" id="role-hospital" onclick="selectRole('hospital')">
+          <div class="rp-ic">🏥</div>
+          <div class="rp-lbl">Hospital</div>
+          <div class="rp-sub">Admin</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right forms -->
+    <div class="auth-right">
+      <!-- PATIENT forms -->
+      <div id="pane-patient">
+        <h2 id="auth-heading">Patient Portal</h2>
+        <p class="auth-sub" id="auth-subheading">Login with your credentials</p>
+        <div class="form-tabs">
+          <button class="ftab on" onclick="authTab('login')">Login</button>
+          <button class="ftab" onclick="authTab('register')">Register</button>
+        </div>
+        <div class="form-err" id="auth-err"></div>
+
+        <!-- Patient Login -->
+        <div id="f-login">
+          <div class="field"><label>Email</label><input id="li-email" type="email" placeholder="patient@email.com" onkeydown="if(event.key==='Enter')doLogin()"></div>
+          <div class="field"><label>Password</label><input id="li-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+          <button class="btn btn-primary btn-full" onclick="doLogin()">Login as Patient →</button>
+          <p style="text-align:center;margin-top:12px;font-size:12px;color:var(--text3)">Demo: any email · password <strong style="color:var(--accent)">123</strong></p>
+        </div>
+
+        <!-- Patient Register -->
+        <div id="f-register" style="display:none">
+          <div style="background:rgba(59,158,255,0.07);border:1px solid var(--border2);border-radius:var(--rsm);padding:12px 14px;margin-bottom:16px;font-size:12px;color:var(--text2)">
+            🏥 You need your hospital's email + password to register.
+          </div>
+          <div class="g2">
+            <div class="field"><label>Hospital Email *</label><input id="rp-hemail" type="email" placeholder="hospital@clinic.com"></div>
+            <div class="field"><label>Hospital Password *</label><input id="rp-hpass" type="password" placeholder="Hospital password"></div>
+          </div>
+          <div style="height:1px;background:var(--border);margin:4px 0 14px"></div>
+          <div class="g2">
+            <div class="field"><label>First Name *</label><input id="rp-fn" placeholder="Priya"></div>
+            <div class="field"><label>Last Name *</label><input id="rp-ln" placeholder="Sharma"></div>
+          </div>
+          <div class="field"><label>Email *</label><input id="rp-email" type="email" placeholder="priya@email.com"></div>
+          <div class="field"><label>Password *</label><input id="rp-pass" type="password" placeholder="Min 4 characters"></div>
+          <div class="g2">
+            <div class="field"><label>Phone</label><input id="rp-phone" placeholder="+91 9876543210"></div>
+            <div class="field"><label>Blood Group</label>
+              <select id="rp-blood"><option value="">Unknown</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select>
+            </div>
+          </div>
+          <button class="btn btn-accent btn-full" onclick="doRegisterPatient()">Register as Patient →</button>
+        </div>
+      </div>
+
+      <!-- DOCTOR forms -->
+      <div id="pane-doctor" style="display:none">
+        <h2>Doctor Portal</h2>
+        <p class="auth-sub">Login with your doctor credentials</p>
+        <div class="form-tabs">
+          <button class="ftab on" onclick="doctorTab('login')">Login</button>
+          <button class="ftab" onclick="doctorTab('register')">Register</button>
+        </div>
+        <div class="form-err" id="doc-err"></div>
+
+        <!-- Doctor Login -->
+        <div id="fd-login">
+          <div class="field"><label>Email</label><input id="dl-email" type="email" placeholder="doctor@hospital.com" onkeydown="if(event.key==='Enter')doDocLogin()"></div>
+          <div class="field"><label>Password</label><input id="dl-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doDocLogin()"></div>
+          <button class="btn btn-primary btn-full" onclick="doDocLogin()">Login as Doctor →</button>
+          <p style="text-align:center;margin-top:12px;font-size:12px;color:var(--text3)">Demo: any email · password <strong style="color:var(--accent)">456</strong></p>
+        </div>
+
+        <!-- Doctor Register -->
+        <div id="fd-register" style="display:none">
+          <div style="background:rgba(59,158,255,0.07);border:1px solid var(--border2);border-radius:var(--rsm);padding:12px 14px;margin-bottom:16px;font-size:12px;color:var(--text2)">
+            🏥 You need your hospital's email + password to register as a doctor.
+          </div>
+          <div class="g2">
+            <div class="field"><label>Hospital Email *</label><input id="rd-hemail" type="email" placeholder="hospital@clinic.com"></div>
+            <div class="field"><label>Hospital Password *</label><input id="rd-hpass" type="password" placeholder="Hospital password"></div>
+          </div>
+          <div style="height:1px;background:var(--border);margin:4px 0 14px"></div>
+          <div class="g2">
+            <div class="field"><label>First Name *</label><input id="rd-fn" placeholder="Dr. Raj"></div>
+            <div class="field"><label>Last Name *</label><input id="rd-ln" placeholder="Kumar"></div>
+          </div>
+          <div class="field"><label>Email *</label><input id="rd-email" type="email" placeholder="dr.raj@hospital.com"></div>
+          <div class="field"><label>Password *</label><input id="rd-pass" type="password" placeholder="Min 4 characters"></div>
+          <div class="field"><label>Specialization</label><input id="rd-spec" placeholder="e.g. Cardiology"></div>
+          <button class="btn btn-accent btn-full" onclick="doRegisterDoctor()">Register as Doctor →</button>
+        </div>
+      </div>
+
+      <!-- HOSPITAL forms -->
+      <div id="pane-hospital" style="display:none">
+        <h2>Hospital Admin</h2>
+        <p class="auth-sub">Register your hospital to get started</p>
+        <div class="form-err" id="hosp-err"></div>
+        <div class="field"><label>Hospital Name *</label><input id="h-name" placeholder="City General Hospital"></div>
+        <div class="field"><label>Hospital Email *</label><input id="h-email" type="email" placeholder="admin@cityhospital.com"></div>
+        <div class="field"><label>Password *</label><input id="h-pass" type="password" placeholder="Set a strong password"></div>
+        <div class="g2">
+          <div class="field"><label>Phone</label><input id="h-phone" placeholder="+91 9876543210"></div>
+          <div class="field"><label>Registration No.</label><input id="h-regno" placeholder="KAR/HOSP/2024"></div>
+        </div>
+        <div class="field"><label>Address</label><input id="h-addr" placeholder="123 Main Street, Bangalore"></div>
+        <button class="btn btn-accent btn-full" onclick="doRegisterHospital()">Register Hospital →</button>
+        <p style="text-align:center;margin-top:12px;font-size:12px;color:var(--text3)">After registering you can add doctors & patients using this hospital's credentials.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════
+     APP SHELL
+═══════════════════════════════ -->
+<div id="app" style="display:none">
+  <aside id="sidebar">
+    <div class="sb-hd">
+      <div class="sb-mark">🏥</div>
+      <div class="sb-txt"><h2>MediVault</h2><span id="sb-sub">—</span></div>
+    </div>
+    <nav class="sb-nav" id="sb-nav"></nav>
+    <div class="sb-ft">
+      <div class="sb-usr">
+        <div class="ava" id="sb-ava">?</div>
+        <div class="uinfo"><div class="uname" id="sb-uname">—</div><div class="urole" id="sb-urole">—</div></div>
+      </div>
+      <button class="nb" onclick="logout()" style="color:var(--danger);width:100%"><span class="ic">🚪</span><span>Logout</span></button>
+    </div>
+  </aside>
+
+  <main id="main-area">
+    <div class="topbar">
+      <button class="btn-icon" onclick="toggleSB()" style="font-size:16px">☰</button>
+      <span class="tb-title" id="tb-title">Dashboard</span>
+      <div class="searchbox" id="g-search" style="display:none">
+        <span style="color:var(--text3)">🔍</span>
+        <input placeholder="Search patients…" id="g-search-input" oninput="filterPats()">
+      </div>
+      <div id="tb-acts" style="display:flex;gap:8px"></div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="pg-dash" class="page on">
+      <div class="pg-title" id="dash-title">Dashboard</div>
+      <div class="pg-sub" id="dash-sub"></div>
+      <div class="stat-grid" id="dash-stats"></div>
+      <div id="dash-body"></div>
+    </div>
+
+    <!-- Patient Folders -->
+    <div id="pg-folders" class="page">
+      <div class="row" style="margin-bottom:18px">
+        <div style="flex:1"><div class="pg-title">My Folders</div><div class="pg-sub" style="margin:0">Create folders and upload your medical documents</div></div>
+        <button class="btn btn-primary" onclick="openCF()">＋ New Folder</button>
+      </div>
+      <div class="fg" id="fg"></div>
+      <div id="fv" style="display:none">
+        <div class="row" style="margin-bottom:14px">
+          <button class="btn btn-ghost btn-sm" onclick="closeFV()">← Back to Folders</button>
+          <span style="font-size:15px;font-weight:700;flex:1" id="fv-title">Folder</span>
+          <button class="btn btn-primary btn-sm" onclick="openUP()">⬆ Upload Document</button>
+        </div>
+        <div class="doc-list" id="fv-docs"></div>
+      </div>
+    </div>
+
+    <!-- Doctor: Patient List -->
+    <div id="pg-patients" class="page">
+      <div class="pg-title">Patient Folders</div>
+      <div class="pg-sub">Each patient's folders are named after them — browse and manage their documents</div>
+      <div id="pat-list"></div>
+      <div id="pat-profile" style="display:none"></div>
+    </div>
+  </main>
+</div>
+
+<!-- ═══════ MODALS ═══════ -->
+<!-- Create / Edit folder -->
+<div class="ov" id="m-folder" onclick="if(event.target===this)closeM('m-folder')">
+  <div class="modal">
+    <div class="mhd"><span class="mtitle" id="mf-title">New Folder</span><button class="mclose" onclick="closeM('m-folder')">×</button></div>
+    <div class="field"><label>Folder Name *</label><input id="mf-name" placeholder="e.g. Lab Reports 2025" maxlength="60" onkeydown="if(event.key==='Enter')saveFolder()"></div>
+    <div class="field"><label>Colour</label>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:5px" id="color-pick"></div>
+    </div>
+    <div class="mft">
+      <button class="btn btn-ghost" onclick="closeM('m-folder')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveFolder()" id="btn-sf">Create Folder</button>
+    </div>
+  </div>
+</div>
+
+<!-- Upload -->
+<div class="ov" id="m-upload" onclick="if(event.target===this)closeM('m-upload')">
+  <div class="modal">
+    <div class="mhd"><span class="mtitle">Upload Documents</span><button class="mclose" onclick="closeM('m-upload')">×</button></div>
+    <div class="dz" id="dz" onclick="document.getElementById('fi').click()" ondragover="dzO(event)" ondragleave="dzL()" ondrop="dzD(event)">
+      <div class="dz-ic">📂</div>
+      <strong>Click to browse or drag & drop</strong>
+      <p style="color:var(--text2);margin-top:5px;font-size:13px">PDF, JPG, PNG, DOCX, TXT supported</p>
+    </div>
+    <input type="file" id="fi" style="display:none" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.txt" onchange="fsEl(this.files)">
+    <div id="up-prev" style="margin-top:11px;display:flex;flex-direction:column;gap:5px"></div>
+    <div class="field" style="margin-top:11px"><label>Description (optional)</label><input id="up-desc" placeholder="e.g. Blood test results June 2025"></div>
+    <div class="mft">
+      <button class="btn btn-ghost" onclick="closeM('m-upload')">Cancel</button>
+      <button class="btn btn-primary" onclick="confUP()">⬆ Upload</button>
+    </div>
+  </div>
+</div>
+
+<!-- Viewer -->
+<div class="viewer" id="viewer">
+  <div class="vbar">
+    <button class="btn btn-ghost btn-sm" onclick="closeV()">← Close</button>
+    <span id="v-name" style="font-weight:600;font-size:13px;flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"></span>
+    <span id="v-meta" style="font-size:11px;color:var(--text2);margin-right:8px"></span>
+    <button class="btn btn-ghost btn-sm" onclick="dlV()">⬇ Download</button>
+  </div>
+  <div class="varea" id="v-area"></div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════
+   CONFIG
+══════════════════════════════════════════════ */
+const API = 'http://localhost:5000/api';   // change if deployed
+const COLS = ['#3b9eff','#00d4a8','#f59e0b','#f56565','#a78bfa','#ec4899','#34d399','#f97316','#06b6d4'];
+const PAL  = ['#3b9eff','#00d4a8','#f59e0b','#f56565','#a78bfa','#ec4899','#34d399','#f97316'];
+
+/* ══════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════ */
+const S = {
+  token: localStorage.getItem('mv_token') || null,
+  user:  JSON.parse(localStorage.getItem('mv_user') || 'null'),
+  role: null,         // current selected role on auth screen
+  // patient state
+  folders: [],        // loaded from server
+  activeFid: null,
+  editFid: null,
+  selColor: COLS[0],
+  pendFiles: [],
+  // doctor state
+  patients: [],
+  vpid: null,         // viewing patient id (_id)
+  vpatient: null,     // full patient object
+  vfid: null,         // viewing folder id in doctor mode
+  // viewer
+  vDoc: null,
+};
+
+/* ══════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════ */
+window.onload = () => {
+  initColorPicker();
+  if (S.token && S.user) {
+    launchApp();
+  } else {
+    selectRole('patient');
+  }
+};
+
+/* ══════════════════════════════════════════════
+   AUTH — role selector
+══════════════════════════════════════════════ */
+function selectRole(role) {
+  S.role = role;
+  ['patient','doctor','hospital'].forEach(r => {
+    g('role-'+r).classList.toggle('on', r === role);
+  });
+  g('pane-patient').style.display  = role === 'patient'  ? '' : 'none';
+  g('pane-doctor').style.display   = role === 'doctor'   ? '' : 'none';
+  g('pane-hospital').style.display = role === 'hospital' ? '' : 'none';
+  clearErrors();
+}
+
+function authTab(t) {
+  ['login','register'].forEach(x => g('f-'+x).style.display = x === t ? '' : 'none');
+  g('auth-err').style.display = 'none';
+  document.querySelectorAll('#pane-patient .ftab').forEach((b,i) => b.classList.toggle('on', i === (t==='login'?0:1)));
+}
+function doctorTab(t) {
+  ['login','register'].forEach(x => g('fd-'+x).style.display = x === t ? '' : 'none');
+  g('doc-err').style.display = 'none';
+  document.querySelectorAll('#pane-doctor .ftab').forEach((b,i) => b.classList.toggle('on', i === (t==='login'?0:1)));
+}
+function clearErrors() {
+  ['auth-err','doc-err','hosp-err'].forEach(id => { if(g(id)) g(id).style.display='none'; });
+}
+function showErr(id, msg) { const el=g(id); el.textContent=msg; el.style.display='block'; }
+
+/* ══════════════════════════════════════════════
+   AUTH — PATIENT
+══════════════════════════════════════════════ */
+async function doLogin() {
+  const email = v('li-email'), pass = v('li-pass');
+  if (!email) return showErr('auth-err','Please enter your email.');
+  if (!pass)  return showErr('auth-err','Please enter your password.');
+
+  load('Logging in…');
+  try {
+    const data = await post('/auth/login-patient', { email, password: pass });
+    storeSession(data.data.token, data.data.user);
+    unload(); toast('Welcome back, '+data.data.user.firstName+'! 👋','ok');
+    launchApp();
+  } catch(e) { unload(); showErr('auth-err', e.message); }
+}
+
+async function doRegisterPatient() {
+  const body = {
+    hospitalEmail:    v('rp-hemail'),
+    hospitalPassword: v('rp-hpass'),
+    firstName: v('rp-fn'), lastName: v('rp-ln'),
+    email: v('rp-email'), password: v('rp-pass'),
+    phone: v('rp-phone'), bloodGroup: g('rp-blood').value,
+  };
+  if (!body.hospitalEmail||!body.hospitalPassword||!body.firstName||!body.lastName||!body.email||!body.password)
+    return showErr('auth-err','Please fill all required fields.');
+
+  load('Registering…');
+  try {
+    const data = await post('/auth/register-patient', body);
+    storeSession(data.data.token, data.data.user);
+    unload(); toast('Registered successfully! Welcome, '+data.data.user.firstName+' 🎉','ok');
+    launchApp();
+  } catch(e) { unload(); showErr('auth-err', e.message); }
+}
+
+/* ══════════════════════════════════════════════
+   AUTH — DOCTOR
+══════════════════════════════════════════════ */
+async function doDocLogin() {
+  const email = v('dl-email'), pass = v('dl-pass');
+  if (!email) return showErr('doc-err','Please enter your email.');
+  if (!pass)  return showErr('doc-err','Please enter your password.');
+
+  load('Logging in…');
+  try {
+    const data = await post('/auth/login-doctor', { email, password: pass });
+    storeSession(data.data.token, data.data.user);
+    unload(); toast('Welcome, Dr. '+data.data.user.firstName+'! 👋','ok');
+    launchApp();
+  } catch(e) { unload(); showErr('doc-err', e.message); }
+}
+
+async function doRegisterDoctor() {
+  const body = {
+    hospitalEmail:    v('rd-hemail'),
+    hospitalPassword: v('rd-hpass'),
+    firstName: v('rd-fn'), lastName: v('rd-ln'),
+    email: v('rd-email'), password: v('rd-pass'),
+    specialization: v('rd-spec'),
+  };
+  if (!body.hospitalEmail||!body.hospitalPassword||!body.firstName||!body.lastName||!body.email||!body.password)
+    return showErr('doc-err','Please fill all required fields.');
+
+  load('Registering doctor…');
+  try {
+    const data = await post('/auth/register-doctor', body);
+    storeSession(data.data.token, data.data.user);
+    unload(); toast('Doctor registered! Welcome, Dr. '+data.data.user.firstName+' 🎉','ok');
+    launchApp();
+  } catch(e) { unload(); showErr('doc-err', e.message); }
+}
+
+/* ══════════════════════════════════════════════
+   AUTH — HOSPITAL
+══════════════════════════════════════════════ */
+async function doRegisterHospital() {
+  const body = {
+    name: v('h-name'), email: v('h-email'), password: v('h-pass'),
+    phone: v('h-phone'), registrationNo: v('h-regno'), address: v('h-addr'),
+  };
+  if (!body.name||!body.email||!body.password)
+    return showErr('hosp-err','Hospital name, email and password are required.');
+
+  load('Registering hospital…');
+  try {
+    const data = await post('/auth/register-hospital', body);
+    unload();
+    toast('Hospital registered! ID: '+data.data.hospitalId,'ok');
+    // Show success + instructions
+    g('hosp-err').style.cssText='display:block;background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.3);color:var(--ok)';
+    g('hosp-err').innerHTML=`✅ <strong>${data.data.name}</strong> registered!<br>
+    Use email <strong>${data.data.email}</strong> + your password to register doctors & patients.`;
+  } catch(e) { unload(); showErr('hosp-err', e.message); }
+}
+
+/* ══════════════════════════════════════════════
+   SESSION
+══════════════════════════════════════════════ */
+function storeSession(token, user) {
+  S.token = token; S.user = user;
+  localStorage.setItem('mv_token', token);
+  localStorage.setItem('mv_user', JSON.stringify(user));
+}
+function logout() {
+  localStorage.removeItem('mv_token'); localStorage.removeItem('mv_user');
+  S.token=null; S.user=null; S.folders=[]; S.patients=[];
+  g('app').style.display='none';
+  g('auth-screen').style.display='flex';
+  selectRole('patient');
+}
+
+/* ══════════════════════════════════════════════
+   LAUNCH APP
+══════════════════════════════════════════════ */
+function launchApp() {
+  g('auth-screen').style.display='none';
+  g('app').style.display='flex';
+  const u = S.user;
+  g('sb-sub').textContent    = u.role==='doctor' ? 'Doctor Portal' : 'Patient Portal';
+  g('sb-uname').textContent  = u.firstName + ' ' + u.lastName;
+  g('sb-urole').textContent  = u.role==='doctor' ? (u.specialization||'Doctor') : 'Patient';
+  const av = g('sb-ava');
+  av.textContent = u.firstName[0]+u.lastName[0]; av.style.background = sc(u.firstName);
+
+  buildNav();
+  showDash();
+}
+
+function buildNav() {
+  const u = S.user;
+  g('sb-nav').innerHTML = u.role === 'patient'
+    ? `<div class="sb-sec">My Records</div>
+       <button class="nb on" id="nb-dash" onclick="showDash()"><span class="ic">📊</span><span>Dashboard</span></button>
+       <button class="nb" id="nb-folders" onclick="showFolders()"><span class="ic">📁</span><span>My Folders</span></button>`
+    : `<div class="sb-sec">Overview</div>
+       <button class="nb on" id="nb-dash" onclick="showDash()"><span class="ic">📊</span><span>Dashboard</span></button>
+       <div class="sb-sec">Patients</div>
+       <button class="nb" id="nb-patients" onclick="showPatients()"><span class="ic">👥</span><span>Patient Folders</span></button>`;
+}
+
+/* ══════════════════════════════════════════════
+   DASHBOARD
+══════════════════════════════════════════════ */
+async function showDash() {
+  sn('nb-dash'); sp('pg-dash');
+  g('tb-title').textContent='Dashboard';
+  g('g-search').style.display='none';
+  g('tb-acts').innerHTML='';
+  const u = S.user;
+  const hr = new Date().getHours();
+  g('dash-title').textContent = (hr<12?'Good morning':hr<17?'Good afternoon':'Good evening')+', '+(u.role==='doctor'?'Dr. ':'')+u.firstName+' 👋';
+  g('dash-sub').textContent   = new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+  if (u.role === 'patient') {
+    load('Loading…');
+    try {
+      const me = await get('/patients/me');
+      S.folders = me.data.folders || [];
+      unload();
+      const tdocs = S.folders.reduce((a,f)=>a+(f.documents?.length||0),0);
+      g('dash-stats').innerHTML=`
+        <div class="stat" style="--sc:#3b9eff"><div class="stat-ic">📁</div><div class="stat-val">${S.folders.length}</div><div class="stat-lbl">My Folders</div></div>
+        <div class="stat" style="--sc:#00d4a8"><div class="stat-ic">📄</div><div class="stat-val">${tdocs}</div><div class="stat-lbl">Documents</div></div>
+        <div class="stat" style="--sc:#a78bfa"><div class="stat-ic">🏥</div><div class="stat-val">1</div><div class="stat-lbl">Hospital</div></div>
+        <div class="stat" style="--sc:#f59e0b"><div class="stat-ic">🔒</div><div class="stat-val">Safe</div><div class="stat-lbl">Encrypted</div></div>`;
+      g('dash-body').innerHTML=`
+        <div class="card">
+          <div class="card-hd"><span class="card-t">My Folders</span><button class="btn btn-ghost btn-sm" onclick="showFolders()">View All →</button></div>
+          <div class="fg" style="margin:0">${S.folders.slice(0,4).map(folderCard).join('')}</div>
+          ${!S.folders.length?`<div class="empty"><div class="empty-ic">📁</div><h3>No folders yet</h3><p>Create your first folder to store medical documents</p><button class="btn btn-primary" onclick="showFolders()" style="margin-top:12px">＋ Create Folder</button></div>`:''}
+        </div>`;
+    } catch(e) { unload(); toast(e.message,'err'); }
+
+  } else {
+    load('Loading…');
+    try {
+      const res = await get('/patients/hospital-patients');
+      S.patients = res.data || [];
+      unload();
+      const totalF = S.patients.reduce((a,p)=>a+(p.folders?.length||0),0);
+      const totalD = S.patients.reduce((a,p)=>(p.folders||[]).reduce((b,f)=>b+(f.documents?.length||0),a),0);
+      g('dash-stats').innerHTML=`
+        <div class="stat" style="--sc:#3b9eff"><div class="stat-ic">👥</div><div class="stat-val">${S.patients.length}</div><div class="stat-lbl">Patients</div></div>
+        <div class="stat" style="--sc:#00d4a8"><div class="stat-ic">📁</div><div class="stat-val">${totalF}</div><div class="stat-lbl">Total Folders</div></div>
+        <div class="stat" style="--sc:#a78bfa"><div class="stat-ic">📄</div><div class="stat-val">${totalD}</div><div class="stat-lbl">Total Documents</div></div>`;
+      g('dash-body').innerHTML=`
+        <div class="card">
+          <div class="card-hd"><span class="card-t">Patients</span><button class="btn btn-ghost btn-sm" onclick="showPatients()">View All →</button></div>
+          ${S.patients.slice(0,5).map(patientRow).join('')}
+          ${!S.patients.length?`<div class="empty"><div class="empty-ic">👥</div><h3>No patients registered yet</h3></div>`:''}
+        </div>`;
+    } catch(e) { unload(); toast(e.message,'err'); }
+  }
+}
+
+/* ══════════════════════════════════════════════
+   PATIENT — FOLDERS PAGE
+══════════════════════════════════════════════ */
+async function showFolders() {
+  sn('nb-folders'); sp('pg-folders');
+  g('tb-title').textContent='My Folders';
+  g('g-search').style.display='none';
+  g('tb-acts').innerHTML=`<button class="btn btn-primary btn-sm" onclick="openCF()">＋ New Folder</button>`;
+  g('fv').style.display='none';
+  S.activeFid=null;
+  await reloadFolders();
+  renderFG();
+}
+
+async function reloadFolders() {
+  load('Loading folders…');
+  try {
+    const me = await get('/patients/me');
+    S.folders = me.data.folders || [];
+    unload();
+  } catch(e) { unload(); toast(e.message,'err'); }
+}
+
+function renderFG() {
+  const el = g('fg');
+  el.style.display='';
+  el.innerHTML = S.folders.map(f => `
+    <div class="fc" style="--fc:${f.color||'#3b9eff'}" id="fc-${f._id}">
+      <div class="fc-acts">
+        <button class="btn-icon" title="Rename" onclick="event.stopPropagation();startRen('${f._id}')" style="font-size:13px">✏️</button>
+        <button class="btn-icon" title="Delete" onclick="event.stopPropagation();delFolder('${f._id}')" style="font-size:13px">🗑️</button>
+      </div>
+      <div class="fc-icon">📁</div>
+      <div class="fc-name" id="fn-${f._id}">${esc(f.name)}</div>
+      <div class="fc-meta">${f.documents?.length||0} document${f.documents?.length!==1?'s':''} · ${ta(f.createdAt)}</div>
+      <div class="fc-open"><button class="btn btn-ghost btn-sm" style="width:100%" onclick="openFV('${f._id}')">Open Folder →</button></div>
+    </div>`).join('');
+  if(!S.folders.length) el.innerHTML=`<div class="empty" style="grid-column:1/-1">
+    <div class="empty-ic">📁</div><h3>No folders yet</h3>
+    <p>Create folders to organise your medical documents</p>
+    <button class="btn btn-primary" onclick="openCF()" style="margin-top:12px">＋ Create First Folder</button>
+  </div>`;
+}
+
+async function openFV(fid) {
+  S.activeFid = fid;
+  const folder = S.folders.find(f => f._id === fid);
+  if (!folder) return;
+  g('fg').style.display='none';
+  g('fv').style.display='block';
+  g('fv-title').textContent = '📁 ' + folder.name;
+  renderFDocs(folder.documents||[], fid, false);
+}
+function closeFV() { S.activeFid=null; g('fg').style.display=''; g('fv').style.display='none'; }
+
+function renderFDocs(docs, fid, isDoctor, patientId) {
+  const el = g('fv-docs') || g('doc-area-'+fid);
+  if(!el) return;
+  if(!docs.length) { el.innerHTML=`<div class="empty"><div class="empty-ic">📄</div><h3>No documents</h3><p>Upload documents to this folder</p></div>`; return; }
+  el.innerHTML = docs.map(d => `
+    <div class="di">
+      <div class="di-ic" style="background:${dibg(d.mimeType)}">${die(d.mimeType)}</div>
+      <div class="di-info">
+        <div class="di-name">${esc(d.name)}</div>
+        <div class="di-sub">${d.description?esc(d.description)+' · ':''}<span>${fmtSz(d.size)}</span> · by ${esc(d.uploadedBy||'—')} · ${ta(d.uploadedAt)}</div>
+      </div>
+      <div class="di-acts">
+        <button class="btn btn-ghost btn-xs" onclick="viewDoc('${fid}','${d._id}',${isDoctor},'${patientId||''}')">👁 View</button>
+        <button class="btn btn-danger btn-xs" onclick="delDoc('${fid}','${d._id}',${isDoctor},'${patientId||''}')">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+/* ══════════════════════════════════════════════
+   RENAME FOLDER
+══════════════════════════════════════════════ */
+function startRen(fid) {
+  const folder = S.folders.find(f=>f._id===fid);
+  if (!folder) return;
+  const el = g('fn-'+fid);
+  el.innerHTML = `<input class="rin" id="ri-${fid}" value="${esc(folder.name)}" maxlength="60"
+    onkeydown="if(event.key==='Enter')commitRen('${fid}');if(event.key==='Escape')cancelRen('${fid}','${esc(folder.name)}')"
+    onblur="commitRen('${fid}')">`;
+  setTimeout(()=>{ const i=g('ri-'+fid); if(i){i.focus();i.select();} }, 40);
+}
+async function commitRen(fid) {
+  const inp = g('ri-'+fid); if(!inp) return;
+  const name = inp.value.trim();
+  if(!name) { cancelRen(fid,''); return; }
+  try {
+    await put('/patients/folders/'+fid, { name });
+    const folder = S.folders.find(f=>f._id===fid);
+    if (folder) folder.name = name;
+    toast('Folder renamed','ok');
+    renderFG();
+  } catch(e) { toast(e.message,'err'); renderFG(); }
+}
+function cancelRen(fid, old) { const el=g('fn-'+fid); if(el) el.textContent=old; }
+
+/* ══════════════════════════════════════════════
+   CREATE / DELETE FOLDER
+══════════════════════════════════════════════ */
+function openCF() {
+  S.editFid=null; S.selColor=COLS[0];
+  g('mf-title').textContent='New Folder';
+  g('btn-sf').textContent='Create Folder';
+  g('mf-name').value='';
+  initColorPicker();
+  openM('m-folder');
+  setTimeout(()=>g('mf-name').focus(),80);
+}
+async function saveFolder() {
+  const name = g('mf-name').value.trim();
+  if (!name) return toast('Folder name required','err');
+  load('Saving…');
+  try {
+    const res = await post('/patients/folders', { name, color: S.selColor });
+    S.folders.push(res.data);
+    closeM('m-folder');
+    unload(); toast('Folder created! 📁','ok');
+    renderFG();
+  } catch(e) { unload(); toast(e.message,'err'); }
+}
+async function delFolder(fid) {
+  if (!confirm('Delete this folder and all its documents?')) return;
+  load('Deleting…');
+  try {
+    await del('/patients/folders/'+fid);
+    S.folders = S.folders.filter(f=>f._id!==fid);
+    unload(); toast('Folder deleted','ok');
+    renderFG();
+  } catch(e) { unload(); toast(e.message,'err'); }
+}
+
+/* ══════════════════════════════════════════════
+   UPLOAD
+══════════════════════════════════════════════ */
+S.pendFiles = [];
+function openUP() {
+  S.pendFiles=[];
+  g('up-prev').innerHTML='';
+  g('up-desc').value='';
+  g('fi').value='';
+  openM('m-upload');
+}
+function dzO(e){e.preventDefault();g('dz').classList.add('over')}
+function dzL(){g('dz').classList.remove('over')}
+function dzD(e){e.preventDefault();dzL();fsEl(e.dataTransfer.files)}
+function fsEl(files){
+  for(const f of files){ if(!S.pendFiles.find(x=>x.name===f.name&&x.size===f.size)) S.pendFiles.push(f); }
+  renderUPrev();
+}
+function renderUPrev(){
+  g('up-prev').innerHTML=S.pendFiles.map((f,i)=>`
+    <div style="display:flex;align-items:center;gap:9px;padding:7px 11px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rxs)">
+      <span style="font-size:17px">${die(f.type)}</span>
+      <span style="flex:1;font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.name)}</span>
+      <span style="font-size:11px;color:var(--text3)">${fmtSz(f.size)}</span>
+      <button class="btn-icon" onclick="rmPend(${i})" style="padding:2px 5px;font-size:11px">✕</button>
+    </div>`).join('');
+}
+function rmPend(i){ S.pendFiles.splice(i,1); renderUPrev(); }
+
+async function confUP() {
+  if(!S.pendFiles.length) return toast('Select at least one file','err');
+  const fid = S.activeFid || S.vfid;
+  if(!fid) return toast('No folder selected','err');
+  const desc = g('up-desc').value.trim();
+  let done=0; const tot=S.pendFiles.length;
+  closeM('m-upload');
+  load('Uploading '+tot+' file'+(tot>1?'s':'')+'…');
+
+  const uploadOne = (file) => new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const body = {
+        name: file.name, mimeType: file.type, size: file.size,
+        description: desc, base64Data: e.target.result,
+      };
+      let url = '/patients/folders/'+fid+'/documents';
+      if (S.user.role === 'doctor' && S.vpatient) url += '?patientId='+S.vpatient.patientId;
+      try {
+        const res = await post(url, body);
+        resolve(res.data);
+      } catch { resolve(null); }
+    };
+    reader.readAsDataURL(file);
+  });
+
+  const results = await Promise.all(S.pendFiles.map(uploadOne));
+  const ok = results.filter(Boolean).length;
+  unload(); toast(ok+' file'+(ok>1?'s':'')+' uploaded! 📄','ok');
+  S.pendFiles=[];
+
+  // Refresh
+  if(S.user.role==='patient') {
+    await reloadFolders();
+    if(S.activeFid) {
+      const folder = S.folders.find(f=>f._id===S.activeFid);
+      if(folder) renderFDocs(folder.documents||[], S.activeFid, false);
+    }
+  } else if (S.vpatient) {
+    await reloadPatient(S.vpatient.patientId);
+  }
+}
+
+/* ══════════════════════════════════════════════
+   DOC VIEWER
+══════════════════════════════════════════════ */
+async function viewDoc(fid, did, isDoctor, patientId) {
+  load('Loading document…');
+  try {
+    let url = '/patients/folders/'+fid+'/documents/'+did;
+    if (isDoctor && patientId) url += '?patientId='+patientId;
+    const res = await get(url);
+    const d = res.data;
+    S.vDoc = d;
+    g('v-name').textContent = d.name;
+    g('v-meta').textContent = fmtSz(d.size);
+    const area = g('v-area');
+    if(d.base64Data) {
+      if(d.mimeType?.startsWith('image/'))
+        area.innerHTML=`<img src="${d.base64Data}" alt="${esc(d.name)}">`;
+      else if(d.mimeType==='application/pdf')
+        area.innerHTML=`<iframe src="${d.base64Data}" style="width:90vw;height:80vh;border:none;border-radius:8px"></iframe>`;
+      else
+        area.innerHTML=`<div class="no-prev"><div style="font-size:56px;margin-bottom:18px">${die(d.mimeType)}</div><p style="font-size:15px">${esc(d.name)}</p><p style="font-size:13px;color:var(--text3);margin-top:8px">Preview not available</p><button class="btn btn-primary" onclick="dlV()" style="margin-top:14px">⬇ Download</button></div>`;
+    } else {
+      area.innerHTML=`<div class="no-prev"><div style="font-size:56px;margin-bottom:18px">${die(d.mimeType)}</div><p style="font-size:15px">${esc(d.name)}</p><p style="font-size:13px;color:var(--text3);margin-top:8px">No preview data stored</p></div>`;
+    }
+    unload(); g('viewer').classList.add('open');
+  } catch(e) { unload(); toast(e.message,'err'); }
+}
+function closeV(){ g('viewer').classList.remove('open'); S.vDoc=null; }
+function dlV(){
+  if(!S.vDoc?.base64Data) return toast('No data to download','err');
+  const a=document.createElement('a'); a.href=S.vDoc.base64Data; a.download=S.vDoc.name; a.click();
+}
+
+async function delDoc(fid, did, isDoctor, patientId) {
+  if(!confirm('Delete this document?')) return;
+  load('Deleting…');
+  try {
+    let url = '/patients/folders/'+fid+'/documents/'+did;
+    if(isDoctor && patientId) url += '?patientId='+patientId;
+    await del(url);
+    unload(); toast('Document deleted','ok');
+    if(S.user.role==='patient') {
+      await reloadFolders();
+      const folder = S.folders.find(f=>f._id===fid);
+      if(folder) renderFDocs(folder.documents||[], fid, false);
+    } else if(S.vpatient) {
+      await reloadPatient(S.vpatient.patientId);
+    }
+  } catch(e) { unload(); toast(e.message,'err'); }
+}
+
+/* ══════════════════════════════════════════════
+   DOCTOR — PATIENTS PAGE
+   Folders named after the PATIENT'S FULL NAME
+══════════════════════════════════════════════ */
+let patQ = '';
+async function showPatients() {
+  sn('nb-patients'); sp('pg-patients');
+  g('tb-title').textContent='Patient Folders';
+  g('g-search').style.display='flex';
+  g('tb-acts').innerHTML='';
+  g('g-search-input').value=''; patQ='';
+  S.vpid=null; S.vpatient=null; S.vfid=null;
+  g('pat-list').style.display='block';
+  g('pat-profile').style.display='none';
+  load('Loading patients…');
+  try {
+    const res = await get('/patients/hospital-patients');
+    S.patients = res.data||[];
+    unload(); renderPL();
+  } catch(e) { unload(); toast(e.message,'err'); }
+}
+
+function filterPats() { patQ=g('g-search-input').value; renderPL(); }
+
+function renderPL() {
+  const q = patQ.toLowerCase();
+  const shown = q ? S.patients.filter(p=>(p.firstName+' '+p.lastName).toLowerCase().includes(q)||p.email.toLowerCase().includes(q)) : S.patients;
+  g('pat-list').innerHTML = shown.length
+    ? shown.map(p => patientRow(p, true)).join('')
+    : `<div class="empty"><div class="empty-ic">🔍</div><h3>No patients found</h3></div>`;
+}
+
+function patientRow(p, clickable=false) {
+  const totalDocs = (p.folders||[]).reduce((a,f)=>a+(f.documents?.length||0),0);
+  const onclick = clickable ? `onclick="viewPatient('${p.patientId}')"` : `onclick="showPatients();setTimeout(()=>viewPatient('${p.patientId}'),100)"`;
+  return `<div class="pr" ${onclick}>
+    <div class="pr-ava" style="background:${sc(p.firstName)}">${p.firstName[0]}${p.lastName[0]}</div>
+    <div class="pr-info">
+      <div class="pr-name">${p.firstName} ${p.lastName}</div>
+      <div class="pr-meta">${p.email} · ${(p.folders||[]).length} folder${(p.folders||[]).length!==1?'s':''} · ${totalDocs} docs</div>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <span class="badge b-blue">${(p.folders||[]).length} folders</span>
+      <span style="color:var(--text3)">›</span>
+    </div>
+  </div>`;
+}
+
+async function viewPatient(patientId) {
+  load('Loading patient records…');
+  try {
+    const res = await get('/patients/'+patientId);
+    S.vpatient = res.data;
+    S.vfid = null;
+    unload();
+    g('pat-list').style.display='none';
+    renderPatientProfile(res.data);
+    g('pat-profile').style.display='block';
+  } catch(e) { unload(); toast(e.message,'err'); }
+}
+
+async function reloadPatient(patientId) {
+  try {
+    const res = await get('/patients/'+patientId);
+    S.vpatient = res.data;
+    renderPatientProfile(res.data);
+  } catch {}
+}
+
+function renderPatientProfile(p) {
+  const pp = g('pat-profile');
+  const totalDocs = (p.folders||[]).reduce((a,f)=>a+(f.documents?.length||0),0);
+
+  // ── KEY FEATURE: folders named after the patient ──
+  // Each folder shown under the patient's name is labelled with the patient's name
+  // The folder grid header is the patient's full name
+  pp.innerHTML = `
+    <button class="btn btn-ghost btn-sm" onclick="backToPats()" style="margin-bottom:16px">← All Patients</button>
+
+    <div class="phd">
+      <div class="p-ava" style="background:${sc(p.firstName)}">${p.firstName[0]}${p.lastName[0]}</div>
+      <div style="flex:1">
+        <div class="p-name">${p.firstName} ${p.lastName}</div>
+        <div class="p-chips">
+          <span class="badge b-blue">${(p.folders||[]).length} folders</span>
+          <span class="badge b-teal">${totalDocs} documents</span>
+          ${p.bloodGroup?`<span class="badge b-red">🩸 ${p.bloodGroup}</span>`:''}
+        </div>
+        <div style="font-size:12px;color:var(--text3);margin-top:6px">${p.email} · <span class="info-tag">${p.patientId}</span></div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <span style="font-size:16px;font-weight:700;flex:1">
+        📂 ${esc(p.firstName)} ${esc(p.lastName)}'s Folders
+      </span>
+    </div>
+
+    ${!(p.folders||[]).length ? `<div class="empty"><div class="empty-ic">📁</div><h3>No folders yet</h3><p>${p.firstName} hasn't created any folders yet.</p></div>` : ''}
+
+    <div class="fg" id="doc-fg">
+      ${(p.folders||[]).map(f => `
+        <div class="fc" style="--fc:${f.color||'#3b9eff'}" onclick="openDrFV('${f._id}')">
+          <div class="fc-icon">📁</div>
+          <div class="fc-name">${esc(f.name)}</div>
+          <div class="fc-meta">${f.documents?.length||0} document${f.documents?.length!==1?'s':''}</div>
+          <div class="fc-open"><button class="btn btn-ghost btn-sm" style="width:100%">Open →</button></div>
+        </div>`).join('')}
+    </div>
+
+    <div id="dr-fv" style="display:none">
+      <div class="row" style="margin-bottom:14px">
+        <button class="btn btn-ghost btn-sm" onclick="closeDrFV()">← Back to Folders</button>
+        <span style="font-size:15px;font-weight:700;flex:1" id="dr-fv-title">Folder</span>
+        <button class="btn btn-primary btn-sm" onclick="openDocUP()">⬆ Upload</button>
+      </div>
+      <div class="doc-list" id="dr-fv-docs"></div>
+    </div>`;
+}
+
+function openDrFV(fid) {
+  if(!S.vpatient) return;
+  S.vfid = fid;
+  const folder = (S.vpatient.folders||[]).find(f=>f._id===fid);
+  if(!folder) return;
+  g('doc-fg').style.display='none';
+  g('dr-fv').style.display='block';
+  g('dr-fv-title').textContent='📁 '+folder.name;
+  // render docs — pass patientId for server calls
+  const el = g('dr-fv-docs');
+  const docs = folder.documents||[];
+  if(!docs.length){
+    el.innerHTML=`<div class="empty"><div class="empty-ic">📄</div><h3>No documents</h3><p>Upload a document to this folder</p><button class="btn btn-primary" onclick="openDocUP()" style="margin-top:12px">⬆ Upload</button></div>`;
+    return;
+  }
+  el.innerHTML = docs.map(d=>`
+    <div class="di">
+      <div class="di-ic" style="background:${dibg(d.mimeType)}">${die(d.mimeType)}</div>
+      <div class="di-info">
+        <div class="di-name">${esc(d.name)}</div>
+        <div class="di-sub">${d.description?esc(d.description)+' · ':''}<span>${fmtSz(d.size)}</span> · by ${esc(d.uploadedBy||'—')} · ${ta(d.uploadedAt)}</div>
+      </div>
+      <div class="di-acts">
+        <button class="btn btn-ghost btn-xs" onclick="viewDoc('${fid}','${d._id}',true,'${S.vpatient.patientId}')">👁 View</button>
+        <button class="btn btn-danger btn-xs" onclick="delDoc('${fid}','${d._id}',true,'${S.vpatient.patientId}')">🗑</button>
+      </div>
+    </div>`).join('');
+}
+function closeDrFV() { S.vfid=null; g('doc-fg').style.display=''; g('dr-fv').style.display='none'; }
+function backToPats() { S.vpatient=null; S.vfid=null; g('pat-list').style.display='block'; g('pat-profile').style.display='none'; }
+
+function openDocUP() {
+  S.pendFiles=[];
+  g('up-prev').innerHTML='';
+  g('up-desc').value='';
+  g('fi').value='';
+  openM('m-upload');
+}
+
+/* ══════════════════════════════════════════════
+   COLOR PICKER
+══════════════════════════════════════════════ */
+function initColorPicker() {
+  const el = g('color-pick');
+  if(!el) return;
+  el.innerHTML = COLS.map(c=>`<div class="csw${c===S.selColor?' picked':''}" style="background:${c}" onclick="setCol('${c}')"></div>`).join('');
+}
+function setCol(c) {
+  S.selColor=c;
+  document.querySelectorAll('.csw').forEach(s=>s.classList.toggle('picked', s.style.background===c || (s.style.background||'').replace(/\s/g,'')===c));
+}
+
+/* ══════════════════════════════════════════════
+   FOLDER CARD helper (dashboard)
+══════════════════════════════════════════════ */
+function folderCard(f) {
+  return `<div class="fc" style="--fc:${f.color||'#3b9eff'}" onclick="showFolders();setTimeout(()=>openFV('${f._id}'),100)">
+    <div class="fc-icon">📁</div>
+    <div class="fc-name">${esc(f.name)}</div>
+    <div class="fc-meta">${f.documents?.length||0} docs · ${ta(f.createdAt)}</div>
+  </div>`;
+}
+
+/* ══════════════════════════════════════════════
+   MODAL helpers
+══════════════════════════════════════════════ */
+function openM(id){ g(id).classList.add('open'); }
+function closeM(id){ g(id).classList.remove('open'); }
+
+/* ══════════════════════════════════════════════
+   TOAST / LOADING
+══════════════════════════════════════════════ */
+function toast(msg, type='inf') {
+  const el=document.createElement('div');
+  el.className='toast '+(type==='ok'?'tok':type==='err'?'terr':'tinf');
+  el.innerHTML=`<span>${type==='ok'?'✅':type==='err'?'❌':'ℹ️'}</span><span>${msg}</span>`;
+  g('toast-w').appendChild(el);
+  setTimeout(()=>{el.style.transition='opacity .3s';el.style.opacity='0';setTimeout(()=>el.remove(),300);},3400);
+}
+function load(msg='Loading…'){ g('loading-msg').textContent=msg; g('loading').classList.add('open'); }
+function unload(){ g('loading').classList.remove('open'); }
+
+/* ══════════════════════════════════════════════
+   API helpers
+══════════════════════════════════════════════ */
+async function apiFetch(method, path, body) {
+  const opts = {
+    method,
+    headers: { 'Content-Type':'application/json', ...(S.token?{'Authorization':'Bearer '+S.token}:{}) }
+  };
+  if(body) opts.body = JSON.stringify(body);
+  const res = await fetch(API+path, opts);
+  const data = await res.json();
+  if(!res.ok) throw new Error(data.message || 'Request failed');
+  return data;
+}
+const get  = (path)        => apiFetch('GET',    path);
+const post = (path, body)  => apiFetch('POST',   path, body);
+const put  = (path, body)  => apiFetch('PUT',    path, body);
+const del  = (path)        => apiFetch('DELETE', path);
+
+/* ══════════════════════════════════════════════
+   UTILITY
+══════════════════════════════════════════════ */
+function g(id){ return document.getElementById(id); }
+function v(id){ return (g(id)?.value||'').trim(); }
+function esc(s){ return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function ta(ts) {
+  if(!ts) return '—';
+  const s=Math.floor((Date.now()-new Date(ts).getTime())/1000);
+  if(s<60) return 'just now'; if(s<3600) return Math.floor(s/60)+'m ago';
+  if(s<86400) return Math.floor(s/3600)+'h ago'; if(s<2592000) return Math.floor(s/86400)+'d ago';
+  return new Date(ts).toLocaleDateString('en-IN');
+}
+function fmtSz(b){ if(!b) return '—'; if(b<1024) return b+'B'; if(b<1048576) return (b/1024).toFixed(1)+'KB'; return (b/1048576).toFixed(1)+'MB'; }
+function sc(s){ return PAL[(s||'A').toUpperCase().charCodeAt(0)%PAL.length]; }
+function die(t){ if(!t)return'📄'; if(t.startsWith('image/'))return'🖼️'; if(t.includes('pdf'))return'📋'; if(t.includes('word')||t.includes('document'))return'📝'; if(t.includes('text'))return'📃'; return'📄'; }
+function dibg(t){ if(!t)return'rgba(59,158,255,.12)'; if(t.startsWith('image/'))return'rgba(167,139,250,.14)'; if(t.includes('pdf'))return'rgba(245,101,101,.12)'; return'rgba(59,158,255,.12)'; }
+function sp(id){ document.querySelectorAll('.page').forEach(p=>p.classList.toggle('on',p.id===id)); }
+function sn(id){ document.querySelectorAll('.nb').forEach(b=>b.classList.toggle('on',b.id===id)); }
+function toggleSB(){ g('sidebar').classList.toggle('slim'); }
+</script>
+</body>
+</html>
